@@ -14,6 +14,8 @@ function data = getTCData(metricName, taskFlag, subList)
     % Check which task you want data for - original TriCOPA, or narrative
     if strcmp(taskFlag, 'nar')
         outputPath = pths.NARdat;
+    elseif strcmp(taskFlag, 'narPilot')
+        outputPath = pths.NARpilotdat;
     elseif strcmp(taskFlag, 'tri')
         outputPath = pths.TCdat;
     else
@@ -98,6 +100,12 @@ function data = getTCData(metricName, taskFlag, subList)
                 % Don't attempt to extract data that isn't there
                 % Remember to drop this trial from the behavioral data
                 badList = [badList, t];
+
+                %added to handle when last trial is dumped for whatever
+                %reason. Note this cannot handle eyetrack being a cell (see
+                %example below)
+                eyetrack(t) = 0; 
+                               
             else
                 opts.flip = logical(behav.Flipped(t));
                 % Subset the big stim table to just this trial's data

@@ -21,12 +21,15 @@ try
     if contains(fileName,['source' filesep 'MW'])
         fileLoc = pths.MWdat;
         matLoc = pths.MWmat;
-    elseif contains(fileName,['source' filesep 'TC'])
+    elseif contains(fileName,['source' filesep 'TC/'])
         fileLoc = pths.TCdat;
         matLoc = pths.TCmat;
-    elseif contains(fileName, ['source' filesep 'NAR'])
+    elseif contains(fileName, ['source' filesep 'TC_narr/'])
         fileLoc = pths.NARdat;
         matLoc = pths.NARmat;
+    elseif contains(fileName, ['source' filesep 'TC_narrPilot/'])
+        fileLoc = pths.NARpilotdat;
+        matLoc = pths.NARpilotmat;
     elseif contains(fileName,['source' filesep 'fixation_checks'])
         fileLoc = pths.fixdat;
         matLoc = pths.fixmat;

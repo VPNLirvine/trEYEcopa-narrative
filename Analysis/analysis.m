@@ -16,7 +16,7 @@ end
 
 % The exact test depends on which stimulus set we're looking at
 % So force a choice:
-choice = menu('Which data do you want to analyze?','TriCOPA','Martin & Weisberg');
+choice = menu('Which data do you want to analyze?','TriCOPA','Martin & Weisberg', 'TriCOPA NarrPilot', 'TriCOPA Narration');
 
 if choice == 1
     % TriCOPA
@@ -37,6 +37,7 @@ if choice == 1
         if ~dflag; data = getTCData(metricName); end
     end
 
+    dataSource = 'TriCOPA1';
     mwflag = 0;
 elseif choice == 2
     % Martin & Weisberg
@@ -48,13 +49,70 @@ elseif choice == 2
         if ~dflag; data = getMWData(metricName); end
     end
     mwflag = 1;
+    dataSource = 'MW1';
     choice = menu('Which analysis method do you want for this Martin & Weisberg data?','correlation', 't-test');
+
+elseif choice == 3
+    % TriCOPA Narratives - pilot data
+    fprintf(1, 'Using metric %s\n\n', metricName);
+    if strcmp(metricName, 'ISC')
+        if ~dflag; data = doISC(getTCData('heatmap', 'narPilot')); end
+        fprintf(1, 'Mean ISC = %0.2f%%\n', 100 * mean(data.Eyetrack));
+        fprintf(1, 'Median ISC = %0.2f%%\n', 100 * median(data.Eyetrack));
+    elseif strcmp(metricName, 'coherence')
+        if ~dflag; [~, data] = doGazePath(getTCData('gaze', 'narPilot')); end
+        % Compress the timecourse down to a single number
+        for i = 1:height(data)
+            data.Eyetrack{i} = mean(data.Eyetrack{i}(1,:), 'omitnan');
+        end
+        % Now that they're not vectors, turn the column into a single mat
+        data.Eyetrack = cell2mat(data.Eyetrack);
+    else
+        if ~dflag; data = getTCData(metricName, 'narPilot'); end
+    end
+
+    mwflag = 0;
+    dataSource = 'TriCOPA_NarPilot';
+
+elseif choice == 4
+    % TriCOPA Narratives - maine experimental data
+    fprintf(1, 'Using metric %s\n\n', metricName);
+    if strcmp(metricName, 'ISC')
+        if ~dflag; data = doISC(getTCData('heatmap', 'nar')); end
+        fprintf(1, 'Mean ISC = %0.2f%%\n', 100 * mean(data.Eyetrack));
+        fprintf(1, 'Median ISC = %0.2f%%\n', 100 * median(data.Eyetrack));
+    elseif strcmp(metricName, 'coherence')
+        if ~dflag; [~, data] = doGazePath(getTCData('gaze', 'nar')); end
+        % Compress the timecourse down to a single number
+        for i = 1:height(data)
+            data.Eyetrack{i} = mean(data.Eyetrack{i}(1,:), 'omitnan');
+        end
+        % Now that they're not vectors, turn the column into a single mat
+        data.Eyetrack = cell2mat(data.Eyetrack);
+    else
+        if ~dflag; data = getTCData(metricName, 'nar'); end
+    end
+
+    mwflag = 0;
+    dataSource = 'TriCOPA_Narr';
+
 end
 
 % Establish some common variables before diverging analysis paths
 subList = unique(data.Subject);
 numSubs = size(subList, 1);
-aqTable = getAQ(specifyPaths('..')); % Get the AQ scores from Qualtrics
+
+if strcmp(dataSource, 'TriCOPA1') | strcmp(dataSource, 'MW1')
+    aqTable = getAQ_QualtricsFormat(specifyPaths('..')); % Get the AQ scores from tsv file formatted from Qualtrics
+else
+    try 
+        aqTable = getAQ_QuestionProFormat(specifyPaths('..'))
+    catch
+        fprintf(1, 'getAQ_QuestionProFormat.m function not yet written\n')
+    end
+end
+
+try
     % Ensure you have an AQ score for every subject
     numAQ = height(aqTable);
     if numSubs > numAQ
@@ -65,26 +123,36 @@ aqTable = getAQ(specifyPaths('..')); % Get the AQ scores from Qualtrics
             , numSubs, numAQ);
         error(txt)
     end
-if mwflag
-    % SubIDs indicate which experiment was run,
-    % But the AQ table only says 'TC'.
-    % TC_01 == MW_01. Compensate.
-    aqTable.SubID = replace(aqTable.SubID, 'TC','MW');
-end
 
-% Calculate and report any correlations between the AQ subscales
-% They're supposed to be orthogonal, so all should be < 0.3
-% Social Skills vs Communication
-[c1, p1] = corr(aqTable.SocialSkills, aqTable.Communication);
-% Social Skills vs Attention to Detail
-[c2, p2] = corr(aqTable.SocialSkills, aqTable.AttentionDetail);
-% Communication vs Attention to Detail
-[c3, p3] = corr(aqTable.Communication, aqTable.AttentionDetail);
-fprintf(1, '\n\nAQ Subscale validation:\n')
-fprintf(1, 'Social Skills vs Communication: r = %0.2f, p = %0.4f\n', c1, p1);
-fprintf(1, 'Social Skills vs Attention to Detail: r = %0.2f, p = %0.4f\n', c2, p2);
-fprintf(1, 'Communication vs Attention to Detail: r = %0.2f, p = %0.4f\n', c3, p3);
-fprintf(1, '\n');
+    if mwflag
+        % SubIDs indicate which experiment was run,
+        % But the AQ table only says 'TC'.
+        % TC_01 == MW_01. Compensate.
+        aqTable.SubID = replace(aqTable.SubID, 'TC','MW');
+    end
+
+
+    % Calculate and report any correlations between the AQ subscales
+    % They're supposed to be orthogonal, so all should be < 0.3
+
+    % Social Skills vs Communication
+    [c1, p1] = corr(aqTable.SocialSkills, aqTable.Communication);
+
+    % Social Skills vs Attention to Detail
+    [c2, p2] = corr(aqTable.SocialSkills, aqTable.AttentionDetail);
+
+    % Communication vs Attention to Detail
+    [c3, p3] = corr(aqTable.Communication, aqTable.AttentionDetail);
+
+    fprintf(1, '\n\nAQ Subscale validation:\n')
+    fprintf(1, 'Social Skills vs Communication: r = %0.2f, p = %0.4f\n', c1, p1);
+    fprintf(1, 'Social Skills vs Attention to Detail: r = %0.2f, p = %0.4f\n', c2, p2);
+    fprintf(1, 'Communication vs Attention to Detail: r = %0.2f, p = %0.4f\n', c3, p3);
+    fprintf(1, '\n');
+
+catch
+    fprintf(1, 'Skipping AQ analysis. This will limit scope of analyses later\n')
+end
 
 % Pick which kind of analysis to run
 if choice == 1 % Correlation analysis
