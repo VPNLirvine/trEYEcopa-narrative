@@ -17,3 +17,5 @@ edfImport further requires you to install [SR Research's EDF API](https://www.sr
 
 Some analyses make use of functions from Matlab's `Image Processing Toolbox`.
 We also use [this False-Discovery Rate function](https://www.mathworks.com/matlabcentral/fileexchange/27418-fdr_bh) from the Matlab File Exchange.
+
+Audio transcription is performed with [OpenAI's Whisper model](https://github.com/openai/whisper), which further requires `ffmpeg`.
