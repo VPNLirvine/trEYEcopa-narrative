@@ -17,27 +17,34 @@ else
 end
 
 pths.analysis = fullfile(pths.base, 'Analysis');
-pths.data = fullfile(pths.base, 'data', 'source');
-    pths.MWdat = fullfile(pths.data, 'MW');
-    pths.TCdat = fullfile(pths.data, 'TC');
-    pths.NARdat = fullfile(pths.data, 'NAR');
-    pths.fixdat = fullfile(pths.data, 'fixation_checks');
-pths.matdata = fullfile(pths.base, 'data', 'derivatives');
-    pths.MWmat = fullfile(pths.matdata, 'MW');
-    pths.TCmat = fullfile(pths.matdata, 'TC');
-    pths.NARmat = fullfile(pths.matdata, 'NAR');
 
-pths.stimuli = fullfile(pths.base, 'stims');
-    pths.MWstim = fullfile(pths.stimuli, 'MartinWeisberg');
-    pths.TCstim = fullfile(pths.stimuli, 'TriCOPA'); % verify contents
-    
+pths.eye = fullfile(pths.base, 'data/eyetracking/source/');
+    pths.eye_data = fullfile(pths.eye, 'data/');
+    pths.eye_pilot = fullfile(pths.eye, 'pilot/');
+
+pths.eye_mat = fullfile(pths.base, 'data/eyetracking/derivatives/');
+    pths.eye_mat_data = fullfile(pths.eye_mat, 'data/');
+    pths.eye_mat_pilot = fullfile(pths.eye_mat, 'pilot/');
+
+
+pths.narr_wav = fullfile(pths.base, 'data/narrations/source/');
+    pths.narr_wav_data = fullfile(pths.narr_wav, 'data/');
+    pths.narr_wav_pilot = fullfile(pths.narr_wav, 'pilot/');
+
+pths.narr = fullfile(pths.base, 'data/narrations/derivatives/');
+    pths.narr_data = fullfile(pths.narr, 'data/');
+    pths.narr_pilot = fullfile(pths.narr, 'pilot/');
+
+pths.beh = fullfile(pths.base, 'data/beh/'); % 
+    pths.beh_data = fullfile(pths.beh, 'data/');
+    pths.beh_pilot = fullfile(pths.beh, 'pilot/');
+
+
 pths.frames = fullfile(pths.base, 'frames');
 pths.edf = fullfile(pths.base, 'edfImport');
 pths.edfalt = fullfile(pths.base, 'edf_alt');
 
-pths.beh = fullfile(pths.base, 'beh'); % behavioral data e.g. RTs
 pths.pos = fullfile(pths.analysis, 'Position'); % adjusted position data
 pths.map = fullfile(pths.analysis, 'motionMaps'); % stim motion heatmaps
 
 pths.fixcheck = fullfile(pths.base, 'fixation_checks'); % calibration
-end

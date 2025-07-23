@@ -2,372 +2,153 @@ function varargout = analysis(varargin)
 % Perform statistical analysis on eyetracking data
 % Optional input 1 should be a metric name listed in selectMetric()
 close all;
+
+metricName = 'scaledfixation';  % by default, use percent time spent fixating
 if nargin > 0
     metricName = varargin{1};
-else
-    % By default, use percent time spent fixating
-    metricName = 'scaledfixation';
 end
-dflag = false;
+ 
+data = [];
 if nargin > 1
     data = varargin{2};
-    dflag = true;
 end
 
-% The exact test depends on which stimulus set we're looking at
-% So force a choice:
-choice = menu('Which data do you want to analyze?','TriCOPA','Martin & Weisberg', 'TriCOPA NarrPilot', 'TriCOPA Narration');
+% The exact test depends on which stimulus set we're looking at, so force a choice:
+choice = menu('Which data do you want to analyze?','TriCOPA NarrPilot', 'TriCOPA Narration');
 
-if choice == 1
-    % TriCOPA
-    fprintf(1, 'Using metric %s\n\n', metricName);
-    if strcmp(metricName, 'ISC')
-        if ~dflag; data = doISC(getTCData('heatmap')); end
-        fprintf(1, 'Mean ISC = %0.2f%%\n', 100 * mean(data.Eyetrack));
-        fprintf(1, 'Median ISC = %0.2f%%\n', 100 * median(data.Eyetrack));
-    elseif strcmp(metricName, 'coherence')
-        if ~dflag; [~, data] = doGazePath(getTCData('gaze')); end
-        % Compress the timecourse down to a single number
-        for i = 1:height(data)
-            data.Eyetrack{i} = mean(data.Eyetrack{i}(1,:), 'omitnan');
-        end
-        % Now that they're not vectors, turn the column into a single mat
-        data.Eyetrack = cell2mat(data.Eyetrack);
+% TriCOPA Narratives - pilot data
+fprintf(1, 'Using metric %s\n\n', metricName);
+if isempty(data)
+    if choice == 1
+        dataSource = 'pilot';
     else
-        if ~dflag; data = getTCData(metricName); end
+        dataSource = 'data';
     end
 
-    dataSource = 'TriCOPA1';
-    mwflag = 0;
-elseif choice == 2
-    % Martin & Weisberg
-    if strcmp(metricName, 'ISC')
-        if ~dflag; data = doISC(getMWData('heatmap')); end
-        fprintf(1, 'Mean ISC = %0.2f%%\n', 100 * mean(data.Eyetrack));
-        fprintf(1, 'Median ISC = %0.2f%%\n', 100 * median(data.Eyetrack));
-    else
-        if ~dflag; data = getMWData(metricName); end
-    end
-    mwflag = 1;
-    dataSource = 'MW1';
-    choice = menu('Which analysis method do you want for this Martin & Weisberg data?','correlation', 't-test');
+    data = getTCData(metricName, dataSource);
 
-elseif choice == 3
-    % TriCOPA Narratives - pilot data
-    fprintf(1, 'Using metric %s\n\n', metricName);
-    if strcmp(metricName, 'ISC')
-        if ~dflag; data = doISC(getTCData('heatmap', 'narPilot')); end
-        fprintf(1, 'Mean ISC = %0.2f%%\n', 100 * mean(data.Eyetrack));
-        fprintf(1, 'Median ISC = %0.2f%%\n', 100 * median(data.Eyetrack));
-    elseif strcmp(metricName, 'coherence')
-        if ~dflag; [~, data] = doGazePath(getTCData('gaze', 'narPilot')); end
-        % Compress the timecourse down to a single number
-        for i = 1:height(data)
-            data.Eyetrack{i} = mean(data.Eyetrack{i}(1,:), 'omitnan');
-        end
-        % Now that they're not vectors, turn the column into a single mat
-        data.Eyetrack = cell2mat(data.Eyetrack);
-    else
-        if ~dflag; data = getTCData(metricName, 'narPilot'); end
-    end
+    % if strcmp(metricName, 'ISC')
+    %     data = doISC(getTCData('heatmap', dataSource));
+    % elseif strcmp(metricName, 'coherence')
+    %     [~, data] = doGazePath(getTCData('gaze', dataSource));
+    % else
+    %     data = getTCData(metricName, dataSource);
+    % end
 
-    mwflag = 0;
-    dataSource = 'TriCOPA_NarPilot';
+    % fprintf(1, 'Mean ISC = %0.2f%%\n', 100 * mean(data.Eyetrack));
+    % fprintf(1, 'Median ISC = %0.2f%%\n', 100 * median(data.Eyetrack));
 
-elseif choice == 4
-    % TriCOPA Narratives - maine experimental data
-    fprintf(1, 'Using metric %s\n\n', metricName);
-    if strcmp(metricName, 'ISC')
-        if ~dflag; data = doISC(getTCData('heatmap', 'nar')); end
-        fprintf(1, 'Mean ISC = %0.2f%%\n', 100 * mean(data.Eyetrack));
-        fprintf(1, 'Median ISC = %0.2f%%\n', 100 * median(data.Eyetrack));
-    elseif strcmp(metricName, 'coherence')
-        if ~dflag; [~, data] = doGazePath(getTCData('gaze', 'nar')); end
-        % Compress the timecourse down to a single number
-        for i = 1:height(data)
-            data.Eyetrack{i} = mean(data.Eyetrack{i}(1,:), 'omitnan');
-        end
-        % Now that they're not vectors, turn the column into a single mat
-        data.Eyetrack = cell2mat(data.Eyetrack);
-    else
-        if ~dflag; data = getTCData(metricName, 'nar'); end
-    end
-
-    mwflag = 0;
-    dataSource = 'TriCOPA_Narr';
-
+    % 
+    % Compress the timecourse down to a single number
+    % for i = 1:height(data)
+    %     data.Eyetrack{i} = mean(data.Eyetrack{i}(1,:), 'omitnan');
+    % end
+    % Now that they're not vectors, turn the column into a single mat
+    % data.Eyetrack = cell2mat(data.Eyetrack);
 end
 
-% Establish some common variables before diverging analysis paths
+
+% Identify subjects based on the gaze data
 subList = unique(data.Subject);
 numSubs = size(subList, 1);
 
-if strcmp(dataSource, 'TriCOPA1') | strcmp(dataSource, 'MW1')
-    aqTable = getAQ_QualtricsFormat(specifyPaths('..')); % Get the AQ scores from tsv file formatted from Qualtrics
-else
-    try 
-        aqTable = getAQ_QuestionProFormat(specifyPaths('..'))
-    catch
-        fprintf(1, 'getAQ_QuestionProFormat.m function not yet written\n')
-    end
+
+% get AQ data
+try
+   aqTable = getAQ_QuestionProFormat(specifyPaths('..'));
+   if numSubs ~= height(aqTable)
+        fprintf(1, '\nError: There are %i EDF files and %i AQ scores. ', numSubs, numAQ);
+   end
+catch
+    fprintf(1, 'getAQ_QuestionProFormat.m function not yet written\n')
 end
 
+% get BVAQ data
 try
-    % Ensure you have an AQ score for every subject
-    numAQ = height(aqTable);
-    if numSubs > numAQ
-        txt = sprintf(['There are %i EDF files, '...
-            'but Qualtrics data had only %i subjects. '...
-            'Please resolve and try again.\n'...
-            'You likely just need to re-download the Qualtrics data.'] ...
-            , numSubs, numAQ);
-        error(txt)
-    end
-
-    if mwflag
-        % SubIDs indicate which experiment was run,
-        % But the AQ table only says 'TC'.
-        % TC_01 == MW_01. Compensate.
-        aqTable.SubID = replace(aqTable.SubID, 'TC','MW');
-    end
-
-
-    % Calculate and report any correlations between the AQ subscales
-    % They're supposed to be orthogonal, so all should be < 0.3
-
-    % Social Skills vs Communication
-    [c1, p1] = corr(aqTable.SocialSkills, aqTable.Communication);
-
-    % Social Skills vs Attention to Detail
-    [c2, p2] = corr(aqTable.SocialSkills, aqTable.AttentionDetail);
-
-    % Communication vs Attention to Detail
-    [c3, p3] = corr(aqTable.Communication, aqTable.AttentionDetail);
-
-    fprintf(1, '\n\nAQ Subscale validation:\n')
-    fprintf(1, 'Social Skills vs Communication: r = %0.2f, p = %0.4f\n', c1, p1);
-    fprintf(1, 'Social Skills vs Attention to Detail: r = %0.2f, p = %0.4f\n', c2, p2);
-    fprintf(1, 'Communication vs Attention to Detail: r = %0.2f, p = %0.4f\n', c3, p3);
-    fprintf(1, '\n');
+    bvaqTable = getBVAQ_QuestionProFormat(specifyPaths('..'));
+    if numSubs ~= height(bvaqTable)
+        fprintf(1, 'Error: There are %i EDF files and %i BVAQ scores. ', numSubs, numAQ);
+   end
 
 catch
-    fprintf(1, 'Skipping AQ analysis. This will limit scope of analyses later\n')
+    fprintf(1, 'getBVAQ_QuestionProFormat.m function not yet written\n')
 end
 
-% Pick which kind of analysis to run
-if choice == 1 % Correlation analysis
 
-    %
-    % Compare the eyetracking data to the behavioral data
-    %
-
-    % Do not run a linear regression for predicting gaze from response
-    % because the response measure is technically a DV, not an IV.
-    % Do a correlation instead.
-    % Calculate individually per subject to make it RFX.
-    % mdl = fitlm(data, 'Eyetrack ~ Response');
-
-    % Subset data to the videos most impacted by AQ
-    % if ~exist('sigVids.mat')
-    %     % This function ought to generate this file
-    %     rankAQperVid(insertAQ(data));
-    % end
-    % sigVidNames = importdata('sigVids.mat');
-    % data = data(ismember(data.StimName, sigVidNames), :);
- 
-    
-    % Get axis labels for later
-    [var1, yl, distTxt] = getGraphLabel(metricName);
-    [var2, yl2, distTxt2] = getGraphLabel('response');
-    
-    % Get the average gaze metric per subject, to correlate with AQ
-    % (since there's only one AQ score per subject)
-    eyeCol = zeros([numSubs, 1]); % preallocate as column
-    for s = 1:numSubs
-        subID = subList{s};
-        subset = strcmp(subID, data.Subject);
-        eyeCol(s) = mean(data.Eyetrack(subset), 'all', 'omitnan');
-    end
-        
-
-    if ~mwflag
-        % Calculate correlations and generate some visualizations
-        % None of these involve AQ, so do them before the upcoming loop
-        eye2rating = getCorrelations(data, metricName); % gaze vs rating
-        data = getCorrelation2(data, metricName); % gaze vs motion
-        data = getCorrelation3(data, metricName); % gaze vs interactivity
-
-        % Get the average video rating per subject (not collected for MW)
-        respCol = zeros([numSubs, 1]); % preallocate as column
-        for s = 1:numSubs
-            subID = subList{s};
-            subset = strcmp(subID, data.Subject);
-            respCol(s) = mean(data.Response(subset), 'all', 'omitnan');
-        end
-
-    end
-    for a = 1:3 % AQ subscales
-        % Loop over the three AQ subscales
-        % Ensure they're sorted the same as the other data
-        aq = zeros([numSubs, 1]); % preallocate as column
-        for s = 1:numSubs
-            subID = subList{s};
-            if a == 1
-                aq(s) = aqTable.SocialSkills(strcmp(subID, aqTable.SubID));
-                aqt = 'AQ1';
-            elseif a == 2
-                aq(s) = aqTable.Communication(strcmp(subID, aqTable.SubID));
-                aqt = 'AQ2';
-            elseif a == 3
-                aq(s) = aqTable.AttentionDetail(strcmp(subID, aqTable.SubID));
-                aqt = 'AQ3';
-            end
-        end
-    
-        % First, directly correlate the metric with AQ
-        % i.e. do not correlate with the clarity rating
-        % Reduce data to an average value per subject,
-        % since there's only 1 AQ value per person
-        [var3, yl3, distTxt3] = getGraphLabel(aqt);
-
-        % Calculate correlations
-        aq2eye = zeros([2,2]); % clear on each loop
-        [aq2eye(1,1), aq2eye(1,2) ]= corr(aq, eyeCol, 'Type', 'Pearson', 'rows', 'complete');
-        [aq2eye(2,1), aq2eye(2,2)] = corr(aq, eyeCol, 'Type', 'Spearman', 'rows', 'complete');
-            
-            % Plot
-            figure();
-            scatter(aq, eyeCol);
-                title(sprintf('Across %i subjects, strength of relationship \x03C1 = %0.2f, p = %0.4f', numSubs, aq2eye(2,1), aq2eye(2,2)));
-                xlabel(var3);
-                ylabel(['Average ' var1]);
-                ylim(yl);
-                xlim(yl3);
-                
-            % Report the correlation score
-            fprintf(1, '\n\nCorrelation between %s and average %s within subject:\n', var3, var1)
-            fprintf(1, '\tSpearman''s \x03C1 = %0.2f, p = %0.4f\n', aq2eye(2,1), aq2eye(2,2));
-            fprintf(1, '\tPearson''s r = %0.2f, p = %0.4f\n', aq2eye(1,1), aq2eye(1,2));
-    
-            % Histograms
-            figure();
-            subplot(1,2,1);
-                histogram(data.Eyetrack);
-                xlabel(var1);
-                title(distTxt);
-                xlim(yl);
-            subplot(1,2,2)
-                histogram(aq, 'BinEdges', 0:5:50);
-                xlabel(var3);
-                title(distTxt3);
-                xlim(yl3);
-                % Add lines indicating the expected distribution(s)
-                % overlayAQ(gca); % skip this 
-        if ~mwflag
-            % Report secondary correlation
-            [aq2rating(1,1), aq2rating(1,2)] = corr(aq, respCol, 'Type', 'Spearman', 'rows', 'complete');
-            [aq2rating(2,1), aq2rating(2,2)] = corr(aq, respCol, 'Type', 'Pearson', 'rows', 'complete');
-            fprintf(1, '\n\nCorrelation between %s and average %s within subject:\n', var3, var2);
-            fprintf(1, '\tSpearman''s \x03C1 = %0.2f, p = %0.4f\n', aq2rating(1,1), aq2rating(1,2));
-            fprintf(1, '\tPearson''s r = %0.2f, p = %0.4f\n', aq2rating(2,1), aq2rating(2,2));
-
-            % Plot that
-            figure();
-                scatter(aq, respCol);
-                xlim(yl3);
-                ylim(yl2);
-                xlabel(var3);
-                ylabel(['Average ', var2]);
-                title(sprintf('Across %i subjects, \x03C1 = %0.2f, p = %0.4f', numSubs, aq2rating(1,1), aq2rating(1,2)));
-
-            % Now Fischer z-transform your main correlation coefficients
-            % zCorr = zscore(eye2rating(:,2));
-            % zCorr = atanh(eye2rating(:,2));
-            zCorr = eye2rating(:,2); % Spearman correlation doesn't assume normality, so no need to transform
-        
-            % Plot and analyze relationship between AQ and current metric
-            [secondCorr, secondP] = corr(aq, zCorr, 'Type', 'Spearman', 'rows', 'complete');
-            figure();
-                % scatter(aq, zCorr, 'filled');
-                scatterhist(aq, zCorr, 'NBins', 10, 'Marker', '.', 'MarkerSize', 18, 'Direction', 'out');
-                xlabel(var3);
-                ylabel('Within-Subject Spearman correlation');
-                title(sprintf('Impact of %s on %s''s relation with %s\n\x03C1 = %0.2f, p = %0.4f', var3, var1, var2, secondCorr, secondP));
-                xlim(yl3);
-                ylim([-1 1]);
-        
-            fprintf(1, 'Correlation between %s and (within-subject correlation between %s and %s):\n', var3, var1, var2)
-            fprintf(1, '\t\x03C1 = %0.2f, p = %0.4f\n', secondCorr, secondP);
-            
-        end % if not MW data
-    end % for each AQ subscale
-
-    if ~mwflag % avoid doing this inside the loop over AQ subscales
-        % Plot correlation of gaze and clarity, i.e. not considering AQ
-        plotCorrelation(data, eye2rating, metricName);
-        % Histograms of gaze and clarity
-        figure();
-        subplot(1,2,1);
-            histogram(data.Eyetrack);
-            xlabel(var1);
-            title(distTxt);
-            xlim(yl);
-        subplot(1,2,2)
-            histogram(data.Response);
-            xlabel(var2);
-            title(distTxt2);
-    end
-elseif choice == 2 % Do a mean comparison across groups
-    
-    % RFX ANOVA accounting for subject-level variance
-    % Generates a figure window with statistical table
-    ivs = {data.Category, data.Subject};
-    rfx = [2]; % which IV(s) is a random effect? (e.g. subject ID)
-    ci = 1; % condition of interest
-    [p1, tbl, stats1] = anovan(data.Eyetrack, ivs, 'varnames', {'Condition', 'SubID'}, 'random', rfx);
-    
-    h = p1(ci) <= .05;
-    % Generate figures
-    BoxplotMW(data, metricName);
-    
-    % % Plain t-test ignoring subject-level variance
-    % socDat = data.Eyetrack(strcmp(data.Category,'social'));
-    % mecDat = data.Eyetrack(strcmp(data.Category, 'mechanical'));
-    % [h,p,~,stats] = ttest2(socDat,mecDat);
-
-    % Print results to screen
-        hlist = {'Fail to reject', 'Reject'};
-        fprintf("\n\n\n")
-        fprintf("%d subjects were considered.\n", numSubs)
-        fprintf("%s the null hypothesis.\n",hlist{h+1})
-        F = tbl{ci+1,strcmp(tbl(1,:),'F')}; % +1 due to header
-        df = tbl{ci+1,strcmp(tbl(1,:),'d.f.')};
-        sse = tbl{ci+1,strcmp(tbl(1,:),'Sum Sq.')};
-        fprintf('\tF(%i) = %0.2f\n', df, F)
-        fprintf("\tp = %f\n",p1(ci))
-        fprintf('\tSSE = %0.2f\n', sse)
-        fprintf('\n')
-
-    % Also see if AQ may be suppressing a difference in marginal means
-    mwAQ(data, aqTable);
+% compute correlation between questionnaire subscores
+try
+    computeSubscorecorr(AQtable, bvaqTable) %requires 1 input, can take up to 3
+catch
+    fprintf(1, 'Error: Independence of questionnaire subscores not computed\n')
 end
-plotItemwise(data, metricName, mwflag);
 
-% Export data matrix on request
-if nargout > 0
-    % Prepare for regression:
-    % 1. Reset AQ to be Social Skills specifically,
-    % since the other two subscales have a low effect
-    for i = 1:height(aqTable)
-        subID = aqTable.SubID{i};
-        subset = strcmp(data.Subject, subID);
-        data.AQ(subset) = aqTable.SocialSkills(i);
+
+
+%% ------ I mostly stopped here ----- %%
+% Compare the eyetracking data to the behavioral data
+fprintf(1, '\nImporting the behavioral files (responses at end of each trial)\n')
+for sub = 1:numSubs
+    subID = subList(sub, :);
+    try
+        behav(:, :, sub) = getBehData(subID, dataSource); % get challenge scores
+    catch
+        fprintf(1, '\nSub %i behavioral file not found or array size mismatch\n', sub)
     end
-    % 2. Convert strings to 'categorical' variables
-    % data.Subject = categorical(data.Subject);
-    % data.StimName = categorical(data.StimName);
-    % if mwflag
-    %     data.Category = categorical(data.Category);
-    % end
-    varargout{1} = data;
 end
+
+% Get axis labels for later
+% [var1, yl, distTxt] = getGraphLabel(metricName);
+% [var2, yl2, distTxt2] = getGraphLabel('response');
+
+   
+    
+% Get the average gaze metric per subject, to correlate with AQ
+% (since there's only one AQ score per subject)
+eyeCol = zeros([numSubs, 1]); % preallocate as column
+for s = 1:numSubs
+    subID = subList{s};
+    subset = strcmp(subID, data.Subject);
+    eyeCol(s) = mean(data.Eyetrack(subset), 'all', 'omitnan');
+end
+
+
+% Calculate correlations and generate some visualizations
+% None of these involve AQ, so do them before the upcoming loop
+eye2rating = getCorrelations(data, metricName); % gaze vs rating
+data = getCorrelation2(data, metricName); % gaze vs motion
+data = getCorrelation3(data, metricName); % gaze vs interactivity
+
+% Get the average video rating per subject (not collected for MW)
+eyeData = zeros([numSubs, 1]); % preallocate as column
+for s = 1:numSubs
+    subID = subList{s};
+    subset = strcmp(subID, data.Subject);
+    eyeData(s) = mean(data.Response(subset), 'all', 'omitnan');
+end
+
+% calculate relationship between eye gaze metric (average across trials)
+% and trait subscales
+computeTraitvsEye(traitTable, eyeData)
+
+
+
+% plotItemwise(data, metricName, mwflag);
+% 
+% % Export data matrix on request
+% if nargout > 0
+%     % Prepare for regression:
+%     % 1. Reset AQ to be Social Skills specifically,
+%     % since the other two subscales have a low effect
+%     for i = 1:height(aqTable)
+%         subID = aqTable.SubID{i};
+%         subset = strcmp(data.Subject, subID);
+%         data.AQ(subset) = aqTable.SocialSkills(i);
+%     end
+%     % 2. Convert strings to 'categorical' variables
+%     % data.Subject = categorical(data.Subject);
+%     % data.StimName = categorical(data.StimName);
+%     % if mwflag
+%     %     data.Category = categorical(data.Category);
+%     % end
+%     varargout{1} = data;
+% end

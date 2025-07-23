@@ -1,4 +1,4 @@
-function [Trials, Preamble] = osfImport(fileName)
+function [Trials, Preamble] = osfImport(fileName_withPath)
 % Import an edf file to matlab using OSF edfImport() and edfExtractInterestingEvents() 
 % Input 1 is expected to contain the entire path
 % This function analyzes that path to determine if the data is TC, MW, etc.
@@ -6,60 +6,56 @@ function [Trials, Preamble] = osfImport(fileName)
 
 addpath('..'); % to allow specifyPaths to run
 pths = specifyPaths('..');
-try
-    
-    if ~ischar(fileName)
-        fileName = char(fileName);
-    end
-    
-    %% adding file extension if necessary
-    if (isempty(regexpi(fileName, '.edf$')))
-        fileName= [fileName '.edf'];
-    end
-    
-    %%
-    if contains(fileName,['source' filesep 'MW'])
-        fileLoc = pths.MWdat;
-        matLoc = pths.MWmat;
-    elseif contains(fileName,['source' filesep 'TC/'])
-        fileLoc = pths.TCdat;
-        matLoc = pths.TCmat;
-    elseif contains(fileName, ['source' filesep 'TC_narr/'])
-        fileLoc = pths.NARdat;
-        matLoc = pths.NARmat;
-    elseif contains(fileName, ['source' filesep 'TC_narrPilot/'])
-        fileLoc = pths.NARpilotdat;
-        matLoc = pths.NARpilotmat;
-    elseif contains(fileName,['source' filesep 'fixation_checks'])
-        fileLoc = pths.fixdat;
-        matLoc = pths.fixmat;
-    else
-        fileLoc = pths.data;
-        matLoc = pths.data;
-    end
 
+
+try
+    % convert to character, if needed
+    if ~ischar(fileName_withPath)
+        fileName_withPath = char(fileName_withPath);
+    end
+    [path, subID, ext] = fileparts(fileName_withPath);
+
+    % %% adding file extension if necessary
+    % if (isempty(regexpi(fileName_withPath, '.edf$')))
+    %     fileName_withPath= [fileName_withPath '.edf'];
+    % end
+    
+
+    % set up proper input/output file paths
     addpath(pths.edf);
 
-    % Check for .mat file, in case bad subject (or just to be lazy)
-    [~,fileName2] = fileparts(fileName);
-    % fileName2 = [fileName2(1:end-3) 'mat'];
-    fileName2 = [fileName2 '.mat'];
-    fp = fullfile(matLoc, fileName2);
-    if exist(fp, 'file')
-        % Import existing data
-        fprintf(1, 'Importing data from %s\n', fp);
-        Trials = importdata(fp);
-        if isfield(Trials, 'FILENAME')
-            % Convert to look like edfImport output
-            Trials = edfTranslate(Trials);
-        end
+    if contains(fileName_withPath,['source' filesep 'data'])
+        edfPath = pths.eye_data;
+        matPath = pths.eye_mat_data;
+    elseif contains(fileName_withPath,['source' filesep 'pilot'])
+        edfPath = pths.eye_pilot;
+        matPath = pths.eye_mat_pilot;
     else
-        % Perform standard import via mex
-        [Trials, Preamble] = edfImport(fileName, [1 1 1], '');
-        % Export to mat file, to save time on future imports
-        save(fp, 'Trials');
-        fprintf(1, 'Data exported to %s\n', fp);
+        fprintf(1, 'Error: Not able to identify relevant path definitions for edf files')
     end
+
+    
+
+    % % Check for .mat file, in case bad subject (or just to be lazy)
+    % [~,fileName2] = fileparts(fileName_withPath);
+    % % fileName2 = [fileName2(1:end-3) 'mat'];
+    % fileName2 = [fileName2 '.mat'];
+    % fp = fullfile(matLoc, fileName2);
+
+   
+
+
+    % Perform standard import via mex
+    [Trials, Preamble] = edfImport(fileName_withPath, [1 1 1], '');
+
+    % Export to mat file, to save time on future imports
+    if ~exist(matPath, 'dir')
+        mkdir(matPath)
+    end
+    save(fullfile(matPath, subID) , 'Trials');
+    fprintf(1, 'Data exported to %s\n', matPath);
+
+
     Trials = edfExtractInterestingEvents(Trials);
 
 catch ME
