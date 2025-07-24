@@ -40,4 +40,5 @@ pths.pos = fullfile(pths.analysis, 'Position'); % adjusted position data
 pths.map = fullfile(pths.analysis, 'motionMaps'); % stim motion heatmaps
 
 pths.fixcheck = fullfile(pths.base, 'fixation_checks'); % calibration
+pths.audio = fullfile(pths.base, 'audio');
 end
