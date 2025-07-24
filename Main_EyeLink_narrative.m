@@ -452,6 +452,7 @@ try
     for i = 1:numTrials
         trialStart = GetSecs;
         response = -1; % reset on each trial
+        lastPressed = -1;
         
         % Before running trial, see if it's time for a break:
         takeABreak(i,numTrials);
