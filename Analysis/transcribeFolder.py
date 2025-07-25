@@ -1,100 +1,65 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Feb 13 16:36:35 2025
-
-@author: brandon
-"""
-
 import whisper
-import os
 import csv
 import re
+from pathlib import Path
 from tkinter import Tk
 from tkinter.filedialog import askdirectory
 
-# Get filenames
-# audioFile = "test.wav"
-# textFile = "results.txt"
+model = whisper.load_model("small")
+pattern = re.compile(r'Q(\d+)')  # pre-compile regex
 
-model = whisper.load_model("turbo")
-
-def process_file(audioFile):
-    
-
-    # load audio and pad/trim it to fit 30 seconds
-    audio = whisper.load_audio(audioFile)
+def process_file(audio_file: str) -> str:
+    """Load audio, transcribe with Whisper, return transcription text."""
+    audio = whisper.load_audio(audio_file)
     audio = whisper.pad_or_trim(audio)
-
-    # make log-Mel spectrogram and move to the same device as the model
     mel = whisper.log_mel_spectrogram(audio, n_mels=model.dims.n_mels).to(model.device)
-
-    # detect the spoken language
     _, probs = model.detect_language(mel)
     print(f"Detected language: {max(probs, key=probs.get)}")
-
-    # decode the audio
-    options = whisper.DecodingOptions()
-    result = whisper.decode(model, mel, options)
-
-    # print the recognized text to the command window
-    print(result.text)
-
-    # Export text as variable
+    result = whisper.decode(model, mel, whisper.DecodingOptions())
     return result.text
-# end function process_file
 
-# Action stage: loop over every file in the input folder
-# Prompt for input and output folders
-Tk().withdraw() # Hide the main Tk window to prevent screen flash where it appears then disappears
-inputFolder = askdirectory(title='Select Input Folder (audio files)') # shows dialog box
-outputFolder = askdirectory(title='Select Output Folder (csv files)')
-
-# Group data by subject ID
-subject_data = {}
-
-for filename in os.listdir(inputFolder):
-    if not filename.endswith(".wav"):
-        continue
-
-    filepath = os.path.join(inputFolder, filename)
-    base = os.path.splitext(filename)[0]
-
-    # Split and parse the filename
-    try:
-        parts = base.split('-')
-        subject_id = parts[0]             # "TC_64"
-        trial_number = int(parts[1])      # 23
-        # Search for 'Q' followed by digits anywhere in the filename
-        # (using regex bc it might be -Q65 or it might be -f_Q65 for flipped)
-        match = re.search(r'Q(\d+)', base)
-        if not match:
-            raise ValueError("No animation ID found in filename")
-        anim_id = int(match.group(1))  # extract the digits after 'Q'
-    except Exception as e:
-        print(f"Filename parse failed for {filename}: {e}")
-        continue
-
-    # Transcribe
-    print(f"Processing: {filename}")
-    transcription = process_file(filepath)
-
-    # Prepare row
-    row = [trial_number, anim_id, transcription]
-
-    # Append to subject's list
-    # if subject_id not in subject_data:
-    #     subject_data[subject_id] = []
-    # subject_data[subject_id].append(row)
-    subject_data.setdefault(subject_id, []).append(row)
-
-# Write CSVs
-for subject_id, rows in subject_data.items():
-    output_path = os.path.join(output_folder, f"{subject_id}.csv")
+def write_csv(subject_id: str, rows: list, output_dir: Path) -> None:
+    """Write transcriptions to CSV file for a given subject."""
+    output_path = output_dir / f"{subject_id}.csv"
     with open(output_path, "w", newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(["trial", "animation_id", "transcription"])
-        for row in sorted(rows):  # sort by trial number if you want
+        for row in sorted(rows):
             writer.writerow(row)
 
-print("Done.")
+def main():
+    Tk().withdraw()
+    input_folder = Path(askdirectory(title="Select Input Folder (audio files)"))
+    output_folder = Path(askdirectory(title="Select Output Folder (csv files)"))
+
+    subject_data = {}
+
+    for i, filepath in enumerate(input_folder.iterdir(), 1):
+        if filepath.suffix.lower() != ".wav":
+            continue
+
+        base = filepath.stem
+        try:
+            parts = base.split("-")
+            subject_identifier = parts[0]
+            trial_num = int(parts[1])
+            match = pattern.search(base)
+            if not match:
+                raise ValueError("No animation ID found in filename")
+            anim_id = int(match.group(1))
+        except ValueError as e:
+            print(f"Filename parse failed for {filepath.name}: {e}")
+            continue
+
+        print(f"Processing file {i}: {filepath.name}")
+        transcription = process_file(str(filepath))
+        row = [trial_num, anim_id, transcription]
+        subject_data.setdefault(subject_identifier, []).append(row)
+
+    for subject_id, rows in subject_data.items():
+        write_csv(subject_id, rows, output_folder)
+
+    print("Done.")
+
+if __name__ == "__main__":
+    main()
